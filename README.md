@@ -1,3 +1,11 @@
+# Branch with glslang automap
+
+```
+shader->setAutoMapBindings(true);
+shader->setAutoMapLocations(true);
+```
+
+
 ## glslcc: Cross-compiler for GLSL shader language (GLSL->HLSL,METAL,GLES,GLSLv3)
 [@septag](https://twitter.com/septagh)
 
