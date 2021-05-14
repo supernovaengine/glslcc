@@ -1122,6 +1122,56 @@ static bool write_file(const char* filepath, const char* data, const char* cvar,
     return true;
 }
 
+//
+// From https://github.com/floooh/sokol-tools
+//
+/*
+    for "Vulkan convention", fragment shader uniform block bindings live in the same
+    descriptor set as vertex shader uniform blocks, but are offset by 4:
+
+    set=0, binding=0..3:    vertex shader uniform blocks
+    set=0, binding=4..7:    fragment shader uniform blocks
+*/
+static const uint32_t vk_fs_ub_binding_offset = 4;
+
+static void fix_bind_slots(spirv_cross::Compiler* compiler, EShLanguage stage, bool is_vulkan)
+{
+    /*
+        This overrides all bind slots like this:
+
+        Target is not WebGPU:
+            - both vertex shader and fragment shader:
+                - uniform blocks go into set=0 and start at binding=0
+                - images go into set=1 and start at binding=0
+        Target is WebGPU:
+            - uniform blocks go into set=0
+                - vertex shader uniform blocks start at binding=0
+                - fragment shader uniform blocks start at binding=1
+            - vertex shader images go into set=1, start at binding=0
+            - fragment shader images go into set=2, start at binding=0
+
+        NOTE that any existing binding definitions are always overwritten,
+        this differs from previous behaviour which checked if explicit
+        bindings existed.
+    */
+    spirv_cross::ShaderResources res = compiler->get_shader_resources();
+    uint32_t ub_slot = 0;
+    if (is_vulkan) {
+        ub_slot = (stage == EShLangVertex) ? 0 : vk_fs_ub_binding_offset;
+    }
+    for (const spirv_cross::Resource& ub_res: res.uniform_buffers) {
+        compiler->set_decoration(ub_res.id, spv::DecorationDescriptorSet, 0);
+        compiler->set_decoration(ub_res.id, spv::DecorationBinding, ub_slot++);
+    }
+
+    uint32_t img_slot = 0;
+    uint32_t img_set = (stage == EShLangVertex) ? 1 : 2;
+    for (const spirv_cross::Resource& img_res: res.sampled_images) {
+        compiler->set_decoration(img_res.id, spv::DecorationDescriptorSet, img_set);
+        compiler->set_decoration(img_res.id, spv::DecorationBinding, img_slot++);
+    }
+}
+
 static int cross_compile(const cmd_args& args, std::vector<uint32_t>& spirv,
     const char* filename, EShLanguage stage, int file_index)
 {
@@ -1194,6 +1244,10 @@ static int cross_compile(const cmd_args& args, std::vector<uint32_t>& spirv,
         }
 
         compiler->set_common_options(opts);
+
+        // Use this to group binding slots for each resource
+        // If not, need use prog->mapIO() for automatic mapping
+        fix_bind_slots(compiler.get(), stage, false);
 
         std::string code;
         // Prepare vertex attribute remap for HLSL
@@ -1703,6 +1757,7 @@ static int compile_files(cmd_args& args, const TBuiltInResource& limits_conf)
         compile_files_ret(0);
     }
 
+    //if (!prog->link(messages) || !prog->mapIO()) {
     if (!prog->link(messages)) {
         puts("Link failed: ");
         fprintf(stderr, "%s\n", prog->getInfoLog());
