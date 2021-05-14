@@ -1246,7 +1246,6 @@ static int cross_compile(const cmd_args& args, std::vector<uint32_t>& spirv,
         compiler->set_common_options(opts);
 
         // Use this to group binding slots for each resource
-        // If not, need use prog->mapIO() for automatic mapping
         fix_bind_slots(compiler.get(), stage, false);
 
         std::string code;
@@ -1757,8 +1756,7 @@ static int compile_files(cmd_args& args, const TBuiltInResource& limits_conf)
         compile_files_ret(0);
     }
 
-    //if (!prog->link(messages) || !prog->mapIO()) {
-    if (!prog->link(messages)) {
+    if (!prog->link(messages) || !prog->mapIO()) {
         puts("Link failed: ");
         fprintf(stderr, "%s\n", prog->getInfoLog());
         fprintf(stderr, "%s\n", prog->getInfoDebugLog());
