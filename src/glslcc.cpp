@@ -606,6 +606,8 @@ enum ImageFormat {
     ImageFormatRg8ui = 37,
     ImageFormatR16ui = 38,
     ImageFormatR8ui = 39,
+    ImageFormatR64ui = 40,
+    ImageFormatR64i = 41,
     ImageFormatMax = 0x7fffffff,
 };
 
@@ -620,7 +622,7 @@ enum Dim {
     DimMax = 0x7fffffff,
 };
 
-const char* k_texture_format_str[spv::ImageFormatR8ui + 1] = {
+const char* k_texture_format_str[spv::ImageFormatR64i + 1] = {
     "unknown",
     "Rgba32f",
     "Rgba16f",
@@ -660,7 +662,9 @@ const char* k_texture_format_str[spv::ImageFormatR8ui + 1] = {
     "Rg16ui",
     "Rg8ui",
     "R16ui",
-    "R8ui"
+    "R8ui",
+    "R64ui",
+    "R64i"
 };
 
 const char* k_texture_dim_str[spv::DimSubpassData + 1] = {
